@@ -1,0 +1,45 @@
+receivers:
+  otlp:
+    protocols:
+      # Ativa o recebimento de dados via OTLP HTTP na porta 4318
+      # (utilizado para receber logs e traces da aplicação instrumentada)
+      http:
+        endpoint: "0.0.0.0:4318"  # Escuta em todas as interfaces da máquina
+
+processors:
+  batch:
+    # Agrupa os dados antes de exportar para melhorar desempenho e reduzir latência
+    timeout: 1s                # Tempo máximo para agrupar os dados antes de enviar
+    send_batch_size: 1000      # Número máximo de itens por lote de envio
+
+exporters:
+  otlphttp:
+    # Exportador de traces via OTLP HTTP
+    endpoint: "http://tempo:3201"  # URL do Tempo (observabilidade de traces)
+    tls:
+      insecure: true  # Permite conexões sem TLS (útil para ambientes locais/dev)
+
+  debug:
+    # Exporta logs e traces no console para depuração
+    verbosity: detailed  # Mostra todos os campos disponíveis dos dados
+
+  loki:
+    # Exportador de logs para o Loki (observabilidade de logs)
+    endpoint: "http://loki:3100/loki/api/v1/push"  # Endpoint do Loki local
+
+service:
+  pipelines:
+    traces:
+      # Pipeline de coleta e exportação de traces
+      receivers: [otlp]       # Coleta via OTLP HTTP
+      processors: [batch]     # Processa os dados em lote
+      exporters: [otlphttp, debug]  # Envia para Tempo e também mostra no console
+
+    logs:
+      # Pipeline de coleta e exportação de logs
+      receivers: [otlp]       # Coleta logs via OTLP HTTP
+      exporters: [loki, debug]  # Envia para o Loki e também exibe no console
+
+  telemetry:
+    logs:
+      level: debug  # Nível de log interno do Collector (útil para diagnóstico)

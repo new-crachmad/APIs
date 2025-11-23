@@ -1,0 +1,98 @@
+version: "2.4"
+services:
+  app:
+    build: .
+    container_name: Sentinel_API-01
+    ports:
+      - "8001:8001"
+    depends_on:
+      - database
+    networks:
+      - sentinel
+    env_file: .env
+    mem_limit: 256m
+    cpus: 0.5
+
+  database:
+    image: postgres
+    container_name: PokeApi_observability_db
+    restart: always
+    ports:
+      - "5433:5433"
+    environment:
+      POSTGRES_USER: pokeob
+      POSTGRES_PASSWORD: pokeob
+      POSTGRES_DB: pokeob
+    command: postgres -c "port=5433" # Força o PostgreSQL a usar a porta 5433
+    networks:
+      - sentinel
+    mem_limit: 128m
+    cpus: 0.3
+
+  # otel-collector:
+  #   image: otel/opentelemetry-collector-contrib:latest
+  #   container_name: otel_collector
+  #   user: "0:0"
+  #   volumes:
+  #     - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   command: ["--config=/etc/otelcol/config.yaml"]
+  #   ports:
+  #     - "4318:4318"
+  #     - "4317:4317"
+  #   env_file: .env
+  #   networks:
+  #     - sentinel
+
+networks:
+  sentinel:
+    external: true
+##############################################################################################
+##############################################################################################
+
+# services:
+#   app:
+#     # build: .
+#     image: poke-ob
+#     container_name: Sentinel_API-01
+#     ports:
+#       - "8001:8001"
+#     depends_on:
+#       - database
+#     networks:
+#       - sentinel
+#     env_file: .env
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: "0.50"
+#           memory: 256M
+#         reservations:
+#           cpus: "0.25"
+#           memory: 128M
+
+#   database:
+#     image: postgres
+#     container_name: PokeApi_observability_db
+#     restart: always
+#     ports:
+#       - "5433:5433"
+#     environment:
+#       POSTGRES_USER: pokeob
+#       POSTGRES_PASSWORD: pokeob
+#       POSTGRES_DB: pokeob
+#     command: postgres -c "port=5433"
+#     networks:
+#       - sentinel
+#     deploy:
+#       resources:
+#         limits:
+#           cpus: "0.30"
+#           memory: 128M
+#         reservations:
+#           cpus: "0.15"
+#           memory: 64M
+
+# networks:
+#   sentinel:
+#     external: true

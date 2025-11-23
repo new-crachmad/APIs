@@ -1,0 +1,27 @@
+# Caminho onde estão todas as APIs
+$apisPath = "C:\APIs"
+
+# Nome da rede que o Sentinel está usando
+$sentinelNetwork = "sentinel"
+
+# Loop por cada pasta dentro de C:\APIs
+Get-ChildItem -Directory $apisPath | ForEach-Object {
+    $apiName = $_.Name
+    $apiPath = $_.FullName
+
+    Write-Host "------------------------------"
+    Write-Host "Subindo API: $apiName"
+    Write-Host "Caminho: $apiPath"
+
+    # Verifica se existe um docker-compose.yml na pasta da API
+    $composeFile = Join-Path $apiPath "docker-compose.yml"
+    if (Test-Path $composeFile) {
+        # Executa o docker-compose up -d --build na pasta da API
+        docker-compose -f $composeFile up -d --build
+        Write-Host "$apiName iniciado com sucesso!"
+    } else {
+        Write-Host "docker-compose.yml não encontrado em $apiPath. Pulando esta API..."
+    }
+}
+Write-Host "------------------------------"
+Write-Host "Todas as APIs foram processadas."

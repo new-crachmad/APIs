@@ -1,0 +1,28 @@
+server:
+  http_listen_port: 3200  # Porta onde o Tempo expõe sua interface HTTP (usada pelo Grafana)
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        # Endpoint para receber spans via protocolo OTLP/HTTP
+        http:
+          endpoint: "0.0.0.0:3201"  # Porta usada pelo OpenTelemetry Collector para enviar spans via HTTP
+
+        # Endpoint para receber spans via protocolo OTLP/gRPC
+        grpc:
+          endpoint: "0.0.0.0:3202"  # Alternativa para envio de spans via gRPC (não usada neste projeto)
+
+storage:
+  trace:
+    backend: local  # Armazenamento local (padrão para desenvolvimento/testes)
+    local:
+      path: /tmp/tempo/blocks  # Diretório onde os blocos de trace serão salvos no container
+
+query_frontend:
+  search:
+    duration_slo: 5s  # Tempo máximo esperado (SLO) para respostas de buscas de traces
+
+compactor:
+  compaction:
+    block_retention: 48h  # Tempo de retenção dos blocos de trace (após isso são removidos)
