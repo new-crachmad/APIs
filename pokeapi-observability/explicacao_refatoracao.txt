@@ -1,0 +1,74 @@
+# Explicação da Refatoração para Instrumentação Automática
+
+Olá! Conforme solicitado, realizei uma refatoração no seu projeto para adotar uma abordagem de instrumentação totalmente automática com OpenTelemetry. Isso simplifica o código e centraliza a configuração.
+
+Abaixo estão os detalhes do que foi alterado e o porquê.
+
+---
+
+### 1. Por que a mudança?
+
+Seu projeto tinha uma mistura de configuração manual de OpenTelemetry no código (`app.py`) e uma configuração para execução automática no `pyproject.toml` (usando `opentelemetry-instrument`). Essa duplicidade poderia causar conflitos e comportamentos inesperados.
+
+A abordagem automática é a prática recomendada, pois:
+- **Simplifica o código:** Remove a necessidade de configurar provedores, exportadores e instrumentadores manualmente no seu código.
+- **Flexibiliza a configuração:** Permite que toda a configuração (como o destino dos dados, o nome do serviço, etc.) seja feita através de variáveis de ambiente, sem alterar o código-fonte.
+- **Manutenção mais fácil:** Atualizar as bibliotecas de instrumentação se torna uma tarefa mais simples.
+
+---
+
+### 2. Alterações no Código
+
+#### a) `app/app.py`
+O arquivo foi significativamente simplificado.
+- **O que foi removido:**
+  - Todas as importações de bibliotecas OpenTelemetry que não eram mais necessárias.
+  - A configuração manual dos `MeterProvider` e `TracerProvider`.
+  - As chamadas explícitas para `.instrument()` e `.instrument_app()` para `FastAPI`, `SQLAlchemy`, `Requests`, `SystemMetrics` e `AsyncPG`.
+  - O middleware `OpenTelemetryMiddleware`.
+- **O que foi mantido:**
+  - A lógica de negócio da sua API FastAPI.
+  - O middleware customizado `db_tracker`, que continua funcionando, pois a instrumentação automática ainda fornece um `MeterProvider` globalmente acessível.
+
+#### b) `pyproject.toml`
+- **O que foi adicionado:**
+  - `opentelemetry-instrumentation-requests`: Para instrumentar automaticamente as chamadas HTTP feitas com a biblioteca `httpx`.
+  - `opentelemetry-instrumentation-asyncpg`: Para instrumentar as chamadas ao banco de dados PostgreSQL feitas com a biblioteca `asyncpg`.
+- **Por que foi adicionado:**
+  - A ferramenta `opentelemetry-instrument` precisa que os pacotes de instrumentação específicos para as bibliotecas que você usa estejam instalados no ambiente para que a mágica da instrumentação automática funcione.
+
+#### c) `.env` (Novo arquivo)
+- **O que é:**
+  - Este é um novo arquivo que centraliza todas as configurações do OpenTelemetry. Ele é carregado automaticamente pela sua tarefa `poe serve`.
+- **Configurações:**
+  - `OTEL_SERVICE_NAME`: Define o nome do seu serviço para "pokeapi-observable".
+  - `OTEL_EXPORTER_OTLP_ENDPOINT`: Aponta para o seu coletor OpenTelemetry no Sentinel (`http://sentinel-otel:4317`).
+  - `OTEL_EXPORTER_OTLP_PROTOCOL`: Define o protocolo de exportação para `grpc`.
+  - `OTEL_TRACES_EXPORTER` e `OTEL_METRICS_EXPORTER`: Ativam a exportação de traces e métricas via OTLP.
+  - `OTEL_PYTHON_LOGGING_AUTO_INSTRUMENTATION_ENABLED`: (Opcional, mas recomendado) Captura logs automaticamente.
+
+---
+
+### 3. Como Executar a Aplicação Agora
+
+Para que as alterações funcionem, siga estes passos no seu terminal:
+
+1.  **Instale as novas dependências:**
+    Se você ainda não o fez, instale as dependências do grupo `otel`:
+    ```bash
+    poetry install --with otel
+    ```
+    Você também pode rodar o comando de bootstrap que já estava configurado para garantir que tudo está instalado:
+    ```bash
+    poetry run poe otel-install
+    ```
+
+2.  **Inicie a aplicação:**
+    Use a tarefa `serve` que já estava definida no seu `pyproject.toml`.
+    ```bash
+    poetry run poe serve
+    ```
+
+Este comando irá iniciar sua aplicação `uvicorn` com a instrumentação automática do OpenTelemetry (`opentelemetry-instrument`), que lerá as configurações do seu arquivo `.env` e instrumentará todas as bibliotecas suportadas em tempo de execução.
+
+Seu código agora está mais limpo e a configuração de observabilidade mais robusta e flexível!

@@ -8,46 +8,11 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, registry
 from sqlalchemy import Column, Integer, String, Table
 
-from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.metrics import get_meter_provider
-from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
-from opentelemetry.instrumentation.system_metrics import SystemMetricsInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry import trace
-from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
-from opentelemetry.metrics import get_meter_provider
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.instrumentation.asyncpg import AsyncPGInstrumentor
-
-
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
-
-# Configuração do exportador de métricas
-# metric_exporter = OTLPMetricExporter(endpoint="http://API-02_otel_collector:4317", insecure=True)
-metric_exporter = OTLPMetricExporter(endpoint="http://sentinel-otel:4317", insecure=True)
-metric_reader = PeriodicExportingMetricReader(metric_exporter)
-provider = MeterProvider(metric_readers=[metric_reader])
-meter = get_meter_provider().get_meter(__name__)
-
-trace.set_tracer_provider(TracerProvider())
-trace.get_tracer_provider().add_span_processor(
-    BatchSpanProcessor(OTLPSpanExporter(endpoint="http://sentinel-otel:4317", insecure=True))
-    # BatchSpanProcessor(OTLPSpanExporter(endpoint="http://API-02_otel_collector:4317", insecure=True))
-)
-
-# Instrumentação de métricas de runtime e sistema
-SystemMetricsInstrumentor().instrument()
-# Instrumentar requisições externas (exemplo: chamadas à PokéAPI)
-RequestsInstrumentor().instrument()
-AsyncPGInstrumentor().instrument()
 
 DATABASE_URL = "postgresql+asyncpg://pokeob:pokeob@database:5433/pokeob"
 POKEAPI_URL = "https://pokeapi.co/api/v2/pokemon/"
@@ -93,17 +58,6 @@ async def lifespan(app):
 
 app = FastAPI(lifespan=lifespan)
 
-# Adicionar o middleware de OpenTelemetry para capturar métricas HTTP
-app.add_middleware(OpenTelemetryMiddleware)
-FastAPIInstrumentor().instrument_app(app, tracer_provider=trace.get_tracer_provider())
-SQLAlchemyInstrumentor().instrument(
-    engine=engine,
-    enable_commenter=True,
-    enable_db_statement=True,
-    enable_connection_attributes=True
-)
-
-
 @app.middleware("http")
 async def db_tracker(request: Request, call_next):
     if "/pokemon/" in str(request.url):
@@ -124,55 +78,6 @@ async def db_tracker(request: Request, call_next):
         except Exception as e:
             raise
     return await call_next(request)
-
-# meter = get_meter_provider().get_meter("http.server")
-
-# @app.middleware("http")
-# async def status_code_capture(request: Request, call_next):
-#     span = trace.get_current_span()
-#     try:
-#         response = await call_next(request)
-        
-#         if span.is_recording():
-#             span.set_attributes({
-#                 "http.response.status_code": response.status_code,
-#                 "http.route": request.url.path,
-#                 "http.method": request.method,
-#                 "http.host": request.url.hostname,
-#                 "http.scheme": request.url.scheme
-#             })
-        
-#         return response
-        
-#     except HTTPException as e:
-#         if span.is_recording():
-#             span.set_attributes({
-#                 "http.status_code": e.status_code,
-#                 "error": True,
-#                 "error.message": str(e.detail)
-#             })
-#         raise
-
-# @app.middleware("http")
-# async def db_metrics_middleware(request: Request, call_next):
-#     meter = metrics.get_meter(__name__)
-#     db_call_counter = meter.create_counter(
-#         "db.calls.count",
-#         description="Count of database calls"
-#     )
-    
-#     try:
-#         response = await call_next(request)
-#         # Incrementa o contador para cada operação no banco
-#         db_call_counter.add(1, attributes={"route": request.url.path})
-#         return response
-#     except Exception as e:
-#         db_call_counter.add(1, attributes={
-#             "route": request.url.path,
-#             "error": True
-#         })
-#         raise
-    
     
 ######################################################################################################################################################################
 ######################################################################################################################################################################

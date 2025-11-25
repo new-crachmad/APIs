@@ -2,16 +2,21 @@ package com.eventmaster.controller;
 
 import com.eventmaster.model.Event;
 import com.eventmaster.repository.EventRepository;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/events")
 public class EventController {
 
     private final EventRepository repository;
+    private static final Logger logger = Logger.getLogger(EventController.class.getName());
+
 
     public EventController(EventRepository repository) {
         this.repository = repository;
@@ -21,6 +26,10 @@ public class EventController {
     @GetMapping
     public ResponseEntity<List<Event>> getAll() {
         List<Event> events = repository.findAll();
+        logger.info("Buscando todos os eventos");
+        logger.log(Level.SEVERE, "Erro ao buscar eventos");
+
+
         return ResponseEntity.ok(events);
     }
 

@@ -9,7 +9,6 @@ Este projeto já está instrumentado com OpenTelemetry. Os traces, logs e métri
 Antes de iniciar, certifique-se de ter os seguintes softwares instalados:
 - Docker
 - Git
-- Postman (para obter as credenciais do Imgur)
 
 ## 🏗️ Passo a passo para rodar o projeto
 
@@ -59,34 +58,26 @@ Se precisar parar a aplicação, execute:
 docker compose down
 ```
 
-## 📝 Configurando o Imgur para upload de imagens
-A API utiliza o Imgur para armazenar imagens. Para configurar as credenciais, siga os passos abaixo:
 
-### 1️⃣ Criar uma conta no Imgur
-Acesse [Imgur](https://imgur.com/) e crie uma conta, caso ainda não tenha uma.
 
-### 2️⃣ Criar uma aplicação no Imgur
-1. Acesse [Imgur API](https://api.imgur.com/oauth2/addclient)
-2. Escolha "OAuth 2 authorization without a callback URL"
-3. Preencha os dados necessários e clique em "Submit"
-4. Após a criação, você receberá um `Client ID` e `Client Secret`
+## 📝 Configurando o Cloudinary para upload de imagens
+A API utiliza o Cloudinary para armazenar imagens. Para configurar as credenciais, siga os passos abaixo:
 
-### 3️⃣ Obter o Refresh Token
-1. Acesse a documentação oficial do Imgur: [https://apidocs.imgur.com/#intro](https://apidocs.imgur.com/#intro)
-2. No Postman, clique na aba **Authorization**
-3. Clique em **Get New Access Token**
-4. Preencha os seguintes campos:
-   - **Auth URL**: `https://api.imgur.com/oauth2/authorize`
-   - **Access Token URL**: `https://api.imgur.com/oauth2/token`
-   - **Client ID**: Seu Client ID do Imgur
-   - **Client Secret**: Seu Client Secret do Imgur
-5. Clique em **Request Token**
-6. Copie o `refresh_token` da resposta e adicione ao `application.properties`
-7. Copie os valores gerados e adicione ao `application.properties`:
+### 1️⃣ Criar uma conta no Cloudinary
+Acesse [Cloudinary](https://cloudinary.com/) e crie uma conta.
+
+### 2️⃣ Obter as credenciais
+No painel do Cloudinary, você encontrará as seguintes credenciais:
+- `cloud_name`
+- `api_key`
+- `api_secret`
+
+### 3️⃣ Adicionar as credenciais ao `application.properties`
+Adicione as credenciais ao seu arquivo `application.properties`:
 ```
-imgur.client-id=SEU_CLIENT_ID
-imgur.client-secret=SEU_CLIENT_SECRET
-imgur.refresh_token=SEU_REFRESH_TOKEN
+cloudinary.cloud-name=SEU_CLOUD_NAME
+cloudinary.api-key=SUA_API_KEY
+cloudinary.api-secret=SEU_API_SECRET
 ```
 
 ### 🔥 Observações

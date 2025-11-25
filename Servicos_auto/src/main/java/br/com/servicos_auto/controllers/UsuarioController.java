@@ -21,10 +21,12 @@ import br.com.servicos_auto.models.Image;
 import br.com.servicos_auto.models.ImageDTO;
 import br.com.servicos_auto.models.Usuario;
 import br.com.servicos_auto.models.UsuarioDTO;
-import br.com.servicos_auto.services.ImageService;
+import br.com.servicos_auto.repositories.ImageRepository;
+import br.com.servicos_auto.services.CloudinaryService;
 import br.com.servicos_auto.services.UsuarioService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -35,7 +37,10 @@ public class UsuarioController {
     private UsuarioService usuarioService;
 
     @Autowired
-    private ImageService imageService;
+    private CloudinaryService cloudinaryService;
+
+    @Autowired
+    private ImageRepository imageRepository;
 
     // Endpoint para listar todos os usuários
     @GetMapping
@@ -84,28 +89,31 @@ public class UsuarioController {
     public ResponseEntity<ImageDTO> uploadImage(@PathVariable Long usuarioId,
             @RequestParam("file") MultipartFile file) {
         try {
-            // Verifica se o arquivo é nulo
-            if (file == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            if (file == null || file.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
 
-            // Verifica se o tipo MIME é nulo ou não é uma imagem
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).build();
             }
 
-            // Faz o upload da imagem
-            Image image = imageService.uploadUsuarioImage(file, usuarioId);
+            Usuario usuario = usuarioService.findEntityById(usuarioId);
+            String url = cloudinaryService.uploadImage(file);
 
-            // Retorna a imagem salva
-            return ResponseEntity.ok(new ImageDTO(image));
+            Image image = new Image();
+            image.setUsuario(usuario);
+            image.setUrl(url);
+            image.setType(file.getContentType());
+            image.setUploadedAt(LocalDateTime.now());
+
+            Image savedImage = imageRepository.save(image);
+
+            return ResponseEntity.ok(new ImageDTO(savedImage));
         } catch (ResponseStatusException e) {
-            // Captura exceções relacionadas a usuário não encontrado
-            return ResponseEntity.status(e.getStatusCode()).body(null);
+            return ResponseEntity.status(e.getStatusCode()).build();
         } catch (Exception e) {
-            // Captura outros erros inesperados
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 

@@ -8,7 +8,7 @@ services:
     depends_on:
       - database
     networks:
-      - sentinel
+      - grafana_sentinel
     env_file: .env
     mem_limit: 256m
     cpus: 0.5
@@ -25,7 +25,7 @@ services:
       POSTGRES_DB: pokeob
     command: postgres -c "port=5433" # Força o PostgreSQL a usar a porta 5433
     networks:
-      - sentinel
+      - grafana_sentinel
     mem_limit: 128m
     cpus: 0.3
 
@@ -42,10 +42,10 @@ services:
   #     - "4317:4317"
   #   env_file: .env
   #   networks:
-  #     - sentinel
+  #     - grafana_sentinel
 
 networks:
-  sentinel:
+  grafana_sentinel:
     external: true
 ##############################################################################################
 ##############################################################################################
@@ -60,7 +60,7 @@ networks:
 #     depends_on:
 #       - database
 #     networks:
-#       - sentinel
+#       - grafana_sentinel
 #     env_file: .env
 #     deploy:
 #       resources:
@@ -83,7 +83,7 @@ networks:
 #       POSTGRES_DB: pokeob
 #     command: postgres -c "port=5433"
 #     networks:
-#       - sentinel
+#       - grafana_sentinel
 #     deploy:
 #       resources:
 #         limits:
@@ -94,5 +94,5 @@ networks:
 #           memory: 64M
 
 # networks:
-#   sentinel:
+#   grafana_sentinel:
 #     external: true

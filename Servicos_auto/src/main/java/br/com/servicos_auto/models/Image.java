@@ -19,17 +19,13 @@ public class Image {
     @NotBlank(message = "A URL da imagem é obrigatória")
     private String url;
 
-    @Column(name = "imgur_id")
-    private String imgurId; // ID da imagem no Imgur
-
-    @Column(name = "imgur_deletehash")
-    private String imgurDeletehash; // Hash para deletar a imagem no Imgur
-
     @Column(name = "type")
     private String type; // Tipo da imagem (ex: "image/jpeg")
 
     @Column(name = "uploaded_at")
-    private LocalDateTime uploadedAt; // Data e hora do upload no Imgur
+    private LocalDateTime uploadedAt; // Data e hora do upload
+
+
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")

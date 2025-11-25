@@ -8,13 +8,13 @@ services:
       POSTGRES_USER: eventuser
       POSTGRES_PASSWORD: eventpass
     ports:
-      - "5437:5432"
+      - "5437:5432"  # Porta externa 5437 mapeando interna 5432
     volumes:
       - pgdata_eventmaster:/var/lib/postgresql/data
     networks:
-      - sentinel
+      - grafana_sentinel
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eventuser"]
+      test: ["CMD-SHELL", "pg_isready -U eventuser -d eventmasterdb"] # <- CORREÇÃO APLICADA AQUI
       interval: 10s
       timeout: 5s
       retries: 5
@@ -25,50 +25,37 @@ services:
       dockerfile: Dockerfile
     container_name: eventmaster-api
     restart: always
-    ports:
-      - "8082:8080"
     depends_on:
       eventmaster-db:
         condition: service_healthy
-       
+    ports:
+      - "8080:8080"
     environment:
-      # --------------------
-      # Database connection
-      # --------------------
+      # Conexão com o banco
       SPRING_DATASOURCE_URL: jdbc:postgresql://eventmaster-db:5432/eventmasterdb
       SPRING_DATASOURCE_USERNAME: eventuser
       SPRING_DATASOURCE_PASSWORD: eventpass
-      
-      # --------------------
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_SHOW_SQL: "true"
+
       # OpenTelemetry
-      # --------------------
-      # --- Adiciona o agente Java na inicialização ---
-      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
-
-      # O endpoint correto para o OTLP/gRPC é 4317
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4317
-      OTEL_SERVICE_NAME: EventMaster_API
-
-      # Exportadores (ativados)
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
+      OTEL_SERVICE_NAME: eventmaster-api
       OTEL_TRACES_EXPORTER: otlp
       OTEL_METRICS_EXPORTER: otlp
       OTEL_LOGS_EXPORTER: otlp
 
-      # Instrumentações úteis
-      OTEL_INSTRUMENTATION_HTTP_SERVER_ENABLED: "true"
-      OTEL_INSTRUMENTATION_RUNTIME_METRICS_ENABLED: "true"
-      OTEL_INSTRUMENTATION_JVM_METRICS_EXPERIMENTAL_ENABLED: "true"
-      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: "true"
-    volumes:
-      # --- Monta o agente para dentro do contêiner ---
-      # !!! IMPORTANTE: O agente deve estar neste caminho no seu PC.
-      - C:/Otel/opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar
+      # Java agent
+      JAVA_TOOL_OPTIONS: "-javaagent:/app/opentelemetry-javaagent.jar"
+
     networks:
-      - sentinel
+      - grafana_sentinel
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
 
 volumes:
   pgdata_eventmaster:
 
 networks:
-  sentinel:
+  grafana_sentinel:
     external: true

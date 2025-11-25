@@ -1,59 +1,39 @@
 # =============================
-# Stage 1 - Build
+# 1. Imagem base
 # =============================
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+FROM eclipse-temurin:17-jdk
 
+# =============================
+# 2. Diretório da aplicação
+# =============================
 WORKDIR /app
 
-# Copia apenas o pom para baixar dependências no cache
-COPY pom.xml .
-
-# Baixa dependências (cache)
-RUN mvn dependency:go-offline
-
-# Copia o código-fonte
-COPY src ./src
-
-# Gera o JAR da aplicação
-RUN mvn clean package -DskipTests
-
+# =============================
+# 3. Copiar JAR gerado pelo Maven
+# =============================
+COPY target/eventmaster-1.0.0.jar /app/app.jar
 
 # =============================
-# Stage 2 - Runtime
+# 4. Copiar o agente OpenTelemetry
 # =============================
-FROM eclipse-temurin:17-jre
-
-WORKDIR /app
-
-# Copia o JAR final gerado
-COPY --from=build /app/target/*.jar /app/app.jar
-
+COPY opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
 
 # =============================
-# OpenTelemetry Java Agent
+# 5. Variáveis do OpenTelemetry
 # =============================
-# Versão estável e existente!
-ARG OTEL_AGENT_VERSION=2.4.0
+ENV OTEL_SERVICE_NAME=eventmaster
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://sentinel-otel:4318
+ENV OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
 
-RUN apt-get update && apt-get install -y curl && apt-get clean
-
-RUN curl -L -f -o /app/opentelemetry-javaagent.jar \
-    https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v${OTEL_AGENT_VERSION}/opentelemetry-javaagent.jar
-
-
-# =============================
-# Variáveis OTEL
-# =============================
+# Ativar o agente Java automaticamente
 ENV JAVA_TOOL_OPTIONS="-javaagent:/app/opentelemetry-javaagent.jar"
 
-
 # =============================
-# Porta da aplicação
+# 6. Porta
 # =============================
 EXPOSE 8080
 
-
 # =============================
-# Execução
+# 7. Executar aplicação
 # =============================
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

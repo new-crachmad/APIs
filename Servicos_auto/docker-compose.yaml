@@ -1,3 +1,5 @@
+version: "3.9"
+
 services:
   database:
     image: postgres:15
@@ -20,19 +22,6 @@ services:
       timeout: 5s
       retries: 5
 
-  sentinel-otel:
-    image: otel/opentelemetry-collector-contrib:latest
-    container_name: sentinel-otel
-    restart: always
-    command: [--config /etc/otelcol-contrib/config.yaml]
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
-    ports:
-      - "4317:4317" # OTLP gRPC
-      - "4318:4318" # OTLP HTTP
-    networks:
-      - sentinel
-
   servicos_auto:
     build:
       context: .
@@ -44,25 +33,21 @@ services:
     depends_on:
       database:
         condition: service_healthy
-      sentinel-otel:
-        condition: service_started
-    
-     
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/servicos_auto
       SPRING_DATASOURCE_USERNAME: servicos_auto
       SPRING_DATASOURCE_PASSWORD: servicos_auto
       
-      #--- Credenciais do Imgur - SUBSTITUA PELOS SEUS VALORES REAIS ---
-      IMGUR_CLIENT_ID: "COLOQUE_SEU_CLIENT_ID_AQUI"
-      IMGUR_CLIENT_SECRET: "COLOQUE_SEU_CLIENT_SECRET_AQUI"
-      IMGUR_REFRESH_TOKEN: "COLOQUE_SEU_REFRESH_TOKEN_AQUI"
+      CLOUDINARY_CLOUD_NAME: "your_cloud_name"
+      CLOUDINARY_API_KEY: "your_api_key"
+      CLOUDINARY_API_SECRET: "your_api_secret"
 
-      #--- Configuração do OpenTelemetry ---
+      # OpenTelemetry (enviando para o Sentinel separado)
       OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf # Força o uso do protocolo HTTP
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
       OTEL_SERVICE_NAME: servicos_auto_api
       JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
+
     networks:
       - sentinel
 
@@ -71,4 +56,4 @@ volumes:
 
 networks:
   sentinel:
-    driver: bridge
+    external: true
