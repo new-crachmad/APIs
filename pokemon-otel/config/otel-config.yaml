@@ -23,7 +23,7 @@ exporters:
     # Exporta logs e traces no console para depuração
     verbosity: detailed  # Mostra todos os campos disponíveis dos dados
 
-  loki:
+  lokiexporter:
     # Exportador de logs para o Loki (observabilidade de logs)
     endpoint: "http://loki:3100/loki/api/v1/push"  # Endpoint do Loki local
 
@@ -38,7 +38,7 @@ service:
     logs:
       # Pipeline de coleta e exportação de logs
       receivers: [otlp]       # Coleta logs via OTLP HTTP
-      exporters: [loki, debug]  # Envia para o Loki e também exibe no console
+      exporters: [lokiexporter, debug]  # Envia para o Loki e também exibe no console
 
   telemetry:
     logs:

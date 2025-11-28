@@ -57,15 +57,6 @@ public class UsuarioService {
         return new UsuarioDTO(usuario); // Retorna o DTO
     }
 
-    public Usuario findEntityById(Long id) {
-        logger.info("Buscando entidade usuario com ID: {}", id);
-        return usuarioRepository.findById(id)
-                .orElseThrow(() -> {
-                    logger.error("usuarios com ID {} nao encontrado", id);
-                    return new ResponseStatusException(HttpStatus.NOT_FOUND, "usuarios nao encontrado");
-                });
-    }
-
     @Transactional
     public Usuario create(Usuario usuario) {
         logger.info("Criando novo usuario: {}", usuario.getEmail());

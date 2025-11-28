@@ -15,13 +15,8 @@ import br.com.servicos_auto.models.Image;
 import br.com.servicos_auto.models.ImageDTO;
 import br.com.servicos_auto.models.PrestadorServico;
 import br.com.servicos_auto.models.PrestadorServicoDTO;
-
 import br.com.servicos_auto.services.ImageService;
 import br.com.servicos_auto.services.PrestadorServicoService;
-import br.com.servicos_auto.services.CloudinaryService;      // 🔥 IMPORT ADICIONADO
-
-import br.com.servicos_auto.repositories.ImageRepository;   // 🔥 IMPORT ADICIONADO
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -42,18 +37,14 @@ public class PrestadorServicoController {
     private PrestadorServicoService prestadorServicoService;
 
     @Autowired
-    private CloudinaryService cloudinaryService;
-
-    @Autowired
-    private ImageRepository imageRepository;
-
-    @Autowired
-    private ImageService imageService;  // 🔥 ADICIONADO — VOCÊ USA ESTE SERVICE
+    private ImageService imageService;
 
     @GetMapping
     public ResponseEntity<List<PrestadorServicoDTO>> findAll() {
+
         List<PrestadorServicoDTO> prestadores = prestadorServicoService.findall();
         return ResponseEntity.ok(prestadores);
+
     }
 
     @GetMapping("/{id}")
@@ -68,8 +59,7 @@ public class PrestadorServicoController {
         return ResponseEntity.ok(prestador);
     }
 
-    @Operation(summary = "Cria um novo prestador de serviço", 
-               description = "Endpoint para cadastrar um novo prestador")
+    @Operation(summary = "Cria um novo prestador de serviço", description = "Endpoint para cadastrar um novo prestador de serviço com nome, email, CPF/CNPJ e senha. O prestador deve ter um CPF ou CNPJ, mas não ambos")
     @PostMapping
     public ResponseEntity<PrestadorServicoDTO> create(@Valid @RequestBody PrestadorServico prestadorServico) {
         PrestadorServicoDTO savedPrestadorServico = prestadorServicoService.create(prestadorServico);
@@ -79,8 +69,10 @@ public class PrestadorServicoController {
     @PatchMapping("/{id}")
     public ResponseEntity<PrestadorServicoDTO> update(@PathVariable Long id,
             @RequestBody PrestadorServico prestadorServico) {
+
         PrestadorServicoDTO updatedPrestador = prestadorServicoService.update(id, prestadorServico);
         return ResponseEntity.ok(updatedPrestador);
+
     }
 
     @DeleteMapping("/{id}")
@@ -89,28 +81,37 @@ public class PrestadorServicoController {
         return ResponseEntity.noContent().build();
     }
 
+    // Endpoint para upload de imagem para um prestador de serviço específico
+
     @PostMapping("/{prestadorId}/upload-image")
     public ResponseEntity<ImageDTO> uploadImage(@PathVariable Long prestadorId,
             @RequestParam("file") MultipartFile file) {
 
         try {
+            // Verifica se o arquivo é nulo
             if (file == null) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
 
+            // Verifica se o tipo MIME é nulo ou não é uma imagem
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
 
+            // Faz o upload da imagem
             Image image = imageService.uploadPrestadorImage(file, prestadorId);
 
+            // Retorna a imagem salva
             return ResponseEntity.ok(new ImageDTO(image));
         } catch (ResponseStatusException e) {
+            // Captura exceções relacionadas a usuário não encontrado
             return ResponseEntity.status(e.getStatusCode()).body(null);
         } catch (Exception e) {
+            // Captura outros erros inesperados
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
+
     }
 
 }

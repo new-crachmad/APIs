@@ -19,13 +19,14 @@ public class Image {
     @NotBlank(message = "A URL da imagem é obrigatória")
     private String url;
 
+    @Column(name = "cloudinary_public_id")
+    private String cloudinaryPublicId; // Public ID da imagem no Cloudinary
+
     @Column(name = "type")
     private String type; // Tipo da imagem (ex: "image/jpeg")
 
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt; // Data e hora do upload
-
-
 
     @ManyToOne
     @JoinColumn(name = "usuario_id")

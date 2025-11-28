@@ -21,10 +21,8 @@ import br.com.servicos_auto.models.Anuncio;
 import br.com.servicos_auto.models.AnuncioDTO;
 import br.com.servicos_auto.models.Image;
 import br.com.servicos_auto.models.ImageDTO;
-import br.com.servicos_auto.repositories.AnuncioRepository;
-import br.com.servicos_auto.repositories.ImageRepository;
 import br.com.servicos_auto.services.AnuncioService;
-import br.com.servicos_auto.services.CloudinaryService;
+import br.com.servicos_auto.services.ImageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -39,14 +37,7 @@ public class AnuncioController {
     private AnuncioService anuncioService;
 
     @Autowired
-    private CloudinaryService cloudinaryService;
-
-    @Autowired
-    private AnuncioRepository anuncioRepository;
-
-    @Autowired
-    private ImageRepository imageRepository;
-
+    private ImageService imageService;
 
     @GetMapping
     public ResponseEntity<List<AnuncioDTO>> findAll() {
@@ -81,36 +72,33 @@ public class AnuncioController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{anuncioId}/upload-image")
-    public ResponseEntity<ImageDTO> uploadImage(@PathVariable Long anuncioId,
+    // Endpoint para upload de imagem para um Anuncio específico
+    @PostMapping("/{AnuncioId}/upload-image")
+    public ResponseEntity<ImageDTO> uploadImage(@PathVariable Long AnuncioId,
             @RequestParam("file") MultipartFile file) {
         try {
-            if (file == null || file.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            // Verifica se o arquivo é nulo
+            if (file == null) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
 
+            // Verifica se o tipo MIME é nulo ou não é uma imagem
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
-                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).build();
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
             }
 
-            Anuncio anuncio = anuncioRepository.findById(anuncioId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Anuncio não encontrado"));
+            // Faz o upload da imagem
+            Image image = imageService.uploadAnuncioImage(file, AnuncioId);
 
-            String imageUrl = cloudinaryService.uploadImage(file);
-
-            Image image = new Image();
-            image.setUrl(imageUrl);
-            image.setAnuncio(anuncio);
-            image.setType(file.getContentType());
-            
-            Image savedImage = imageRepository.save(image);
-
-            return ResponseEntity.ok(new ImageDTO(savedImage));
+            // Retorna a imagem salva
+            return ResponseEntity.ok(new ImageDTO(image));
         } catch (ResponseStatusException e) {
-            return ResponseEntity.status(e.getStatusCode()).build();
+            // Captura exceções relacionadas a usuário não encontrado
+            return ResponseEntity.status(e.getStatusCode()).body(null);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            // Captura outros erros inesperados
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 

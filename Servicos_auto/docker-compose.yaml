@@ -1,8 +1,7 @@
-version: "3.9"
-
 services:
+
   database:
-    image: postgres:15
+    image: postgres:latest
     container_name: servicos_auto_db
     restart: always
     ports:
@@ -11,49 +10,63 @@ services:
       POSTGRES_USER: servicos_auto
       POSTGRES_PASSWORD: servicos_auto
       POSTGRES_DB: servicos_auto
-      POSTGRES_HOST_AUTH_METHOD: trust
-    volumes:
-      - pgdata_servicos_auto:/var/lib/postgresql/data
-    networks:
-      - sentinel
+      POSTGRES_MEM: 80M
+    mem_limit: 128M
+    mem_reservation: 96M
+    cpus: 0.5
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U servicos_auto"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
+    networks:
+      - grafana_sentinel
+
 
   servicos_auto:
     build:
       context: .
-      dockerfile: dockerfile
-    container_name: servicos_auto_api
+      dockerfile: Dockerfile   # <== CORRIGIDO
+    container_name: Sentinel_API-02
     restart: always
     ports:
       - "8085:8085"
-    depends_on:
-      database:
-        condition: service_healthy
     environment:
+
+      # Database
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/servicos_auto
       SPRING_DATASOURCE_USERNAME: servicos_auto
       SPRING_DATASOURCE_PASSWORD: servicos_auto
-      
-      CLOUDINARY_CLOUD_NAME: "your_cloud_name"
-      CLOUDINARY_API_KEY: "your_api_key"
-      CLOUDINARY_API_SECRET: "your_api_secret"
 
-      # OpenTelemetry (enviando para o Sentinel separado)
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
-      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
-      OTEL_SERVICE_NAME: servicos_auto_api
-      JAVA_TOOL_OPTIONS: -javaagent:/app/opentelemetry-javaagent.jar
+      # Cloudinary
+      CLOUDINARY_URL: cloudinary://165568658442188:iHo1y5Ee0RxvqD9wDXzMn5KjP4k
+      CLOUDINARY_CLOUD_NAME: Root
+
+      # OpenTelemetry
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4317   # <== CORRIGIDO
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc                        # <== ADICIONADO
+      OTEL_SERVICE_NAME: Sentinel_API-02
+      OTEL_METRICS_EXPORTER: otlp
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+
+      OTEL_INSTRUMENTATION_HTTP_SERVER_ENABLED: "true"
+      OTEL_INSTRUMENTATION_JVM_METRICS_EXPERIMENTAL_ENABLED: "true"
+      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: "true"
+      OTEL_INSTRUMENTATION_RUNTIME_METRICS_ENABLED: "true"
+
+    mem_limit: 1024M
+    mem_reservation: 768M
+    cpus: 0.5
+    
+    depends_on:
+      database:
+        condition: service_healthy
 
     networks:
-      - sentinel
+      - grafana_sentinel
 
-volumes:
-  pgdata_servicos_auto:
 
 networks:
-  sentinel:
+  grafana_sentinel:
     external: true

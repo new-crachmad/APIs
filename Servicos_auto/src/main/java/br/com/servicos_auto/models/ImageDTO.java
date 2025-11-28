@@ -9,12 +9,14 @@ public class ImageDTO {
 
     private Long id;
     private String url;
+    private String cloudinaryPublicId;
     private String type;
     private LocalDateTime uploadedAt;
 
     public ImageDTO(Image image) {
         this.id = image.getId();
         this.url = image.getUrl();
+        this.cloudinaryPublicId = image.getCloudinaryPublicId();
         this.type = image.getType();
         this.uploadedAt = image.getUploadedAt();
     }

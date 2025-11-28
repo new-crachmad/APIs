@@ -1,37 +1,31 @@
-# =============================
-# Stage 1 - Build (Maven)
-# =============================
-FROM maven:3.9.9-amazoncorretto-21-al2023 AS build
+# Estágio de build: usa uma imagem com Maven e Java 21 para compilar o projeto
+FROM maven:3.9.9-amazoncorretto-21-al2023 as build
 
+# Define o diretório de trabalho dentro do container
 WORKDIR /build
 
-COPY pom.xml .
-COPY src ./src
+# Copia todos os arquivos do projeto para o diretório /build no container
+COPY . .
+
+# Executa o comando Maven para compilar o projeto e gerar o arquivo JAR
 RUN mvn clean package -DskipTests
 
-# =============================
-# Stage 2 - Runtime
-# =============================
+
+# Estágio final: imagem leve com apenas Java 21
 FROM amazoncorretto:21
 
+# Diretório de trabalho
 WORKDIR /app
 
-# Copia o JAR da aplicação
-COPY --from=build /build/target/*.jar /app/app.jar
+# Copia o arquivo JAR gerado pelo Maven
+COPY --from=build /build/target/*.jar /app/servicos_auto.jar
 
-# Copia o Java Agent do OpenTelemetry
-COPY opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
+# Baixa o agente do OpenTelemetry
+RUN curl -L -o /app/opentelemetry-javaagent.jar \
+    https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar
 
-# =============================
-# Configurações de OpenTelemetry
-# =============================
-# Mantida: Atributo de recurso, é útil para identificação no Grafana/Tempo
-ENV OTEL_RESOURCE_ATTRIBUTES=deployment.environment=prod
-
-# Força o Java Agent automaticamente
-ENV JAVA_TOOL_OPTIONS="-javaagent:/app/opentelemetry-javaagent.jar"
-
-# Porta da API
+# Expõe a porta da aplicação
 EXPOSE 8085
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_TOOL_OPTIONS -jar /app/app.jar"]
+# Comando para iniciar a aplicação com o agente OpenTelemetry
+ENTRYPOINT ["java", "-javaagent:/app/opentelemetry-javaagent.jar", "-jar", "servicos_auto.jar"]
