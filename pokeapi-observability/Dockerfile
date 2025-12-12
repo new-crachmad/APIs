@@ -1,27 +1,29 @@
 # Usa uma imagem base do Python
 FROM python:3.13-slim
 
-# Define o diretório de trabalho dentro do container
+# Diretório de trabalho
 WORKDIR /app
 
-# Copia os arquivos de configuração do Poetry
+# Copia arquivos do Poetry
 COPY pyproject.toml poetry.lock* ./
 
-# Instala o Poetry e configura para não usar ambiente virtual
+# Instala o Poetry e ajusta o ambiente
 RUN pip install poetry && \
     poetry config virtualenvs.create false 
 
-# Instala todas as dependências, incluindo as de desenvolvimento
+# Instala dependências do projeto
 RUN poetry install --with dev --no-root
 
-# Instala as dependências do OpenTelemetry
-RUN opentelemetry-bootstrap -a install
+# Instala dependências de Observabilidade (OpenTelemetry + Instrumentações)
+RUN opentelemetry-bootstrap -a install && \
+    pip install opentelemetry-instrumentation-fastapi \
+                opentelemetry-instrumentation-httpx
 
-# Copia o restante do código da aplicação
+# Copia o restante da aplicação
 COPY . .
 
-# Expõe a porta usada pela aplicação
+# Porta exposta
 EXPOSE 8001
 
-# Comando para rodar a aplicação instrumentada com OpenTelemetry
+# Inicia a aplicação com instrumentação automática do OpenTelemetry
 CMD ["opentelemetry-instrument", "uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "8001"]

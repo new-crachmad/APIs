@@ -8,16 +8,17 @@ services:
       POSTGRES_USER: eventuser
       POSTGRES_PASSWORD: eventpass
     ports:
-      - "5437:5432"  # Porta externa 5437 mapeando interna 5432
+      - "5437:5432"
     volumes:
       - pgdata_eventmaster:/var/lib/postgresql/data
     networks:
       - grafana_sentinel
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U eventuser -d eventmasterdb"] # <- CORREÇÃO APLICADA AQUI
+      test: ["CMD-SHELL", "pg_isready -U eventuser -d eventmasterdb"]
       interval: 10s
       timeout: 5s
       retries: 5
+
 
   eventmaster-api:
     build:
@@ -25,33 +26,57 @@ services:
       dockerfile: Dockerfile
     container_name: eventmaster-api
     restart: always
+
     depends_on:
       eventmaster-db:
         condition: service_healthy
+
     ports:
       - "8080:8080"
+
     environment:
-      # Conexão com o banco
+
+      # Banco
       SPRING_DATASOURCE_URL: jdbc:postgresql://eventmaster-db:5432/eventmasterdb
       SPRING_DATASOURCE_USERNAME: eventuser
       SPRING_DATASOURCE_PASSWORD: eventpass
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_SHOW_SQL: "false"
 
+      # ==========================
       # OpenTelemetry
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
+      # ==========================
       OTEL_SERVICE_NAME: eventmaster-api
-      OTEL_TRACES_EXPORTER: otlp
-      OTEL_METRICS_EXPORTER: otlp
-      OTEL_LOGS_EXPORTER: otlp
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
 
-      # Java agent
+      # Endpoints específicos
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://sentinel-otel:4318/v1/traces
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://sentinel-otel:4318/v1/logs
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://sentinel-otel:4318/v1/metrics
+
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+
+      # Instrumentação automática
+      OTEL_INSTRUMENTATION_HTTP_SERVER_ENABLED: "true"
+      OTEL_INSTRUMENTATION_HTTP_CLIENT_ENABLED: "true"
+      OTEL_INSTRUMENTATION_JVM_ENABLED: "true"
+      OTEL_INSTRUMENTATION_JVM_METRICS_ENABLED: "true"
+      OTEL_INSTRUMENTATION_RUNTIME_METRICS_ENABLED: "true"
+      OTEL_INSTRUMENTATION_MICROMETER_ENABLED: "true"
+      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: "true"
+
+      # Java Agent
       JAVA_TOOL_OPTIONS: "-javaagent:/app/opentelemetry-javaagent.jar"
 
     networks:
       - grafana_sentinel
+
     volumes:
       - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
+
 
 volumes:
   pgdata_eventmaster:

@@ -1,98 +1,88 @@
 version: "2.4"
+
 services:
   app:
     build: .
-    container_name: Sentinel_API-01
+    container_name: PokeApi_observability
     ports:
       - "8001:8001"
+
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+    
     networks:
       - grafana_sentinel
     env_file: .env
+
+    environment:
+      # ==========================
+      # OpenTelemetry (Python)
+      # ==========================
+      OTEL_SERVICE_NAME: PokeApi_observability
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+
+      # Endpoints específicos
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://sentinel-otel:4318/v1/traces
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://sentinel-otel:4318/v1/metrics
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://sentinel-otel:4318/v1/logs
+
+      # Exportadores ativos
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
+
+      # Instrumentação Python
+      OTEL_PYTHON_LOG_CORRELATION: "true"
+      OTEL_PYTHON_DISABLED_INSTRUMENTATIONS: ""
+
     mem_limit: 256m
     cpus: 0.5
 
+
   database:
-    image: postgres
+    image: postgres:15
     container_name: PokeApi_observability_db
     restart: always
+
     ports:
-      - "5433:5433"
+      - "5433:5432"
+
     environment:
       POSTGRES_USER: pokeob
       POSTGRES_PASSWORD: pokeob
       POSTGRES_DB: pokeob
-    command: postgres -c "port=5433" # Força o PostgreSQL a usar a porta 5433
+
+      # Logs de debug
+      POSTGRES_LOGGING: "on"
+      POSTGRES_LOG_STATEMENT: "all"
+      POSTGRES_LOG_MIN_DURATION_STATEMENT: 0
+
     networks:
       - grafana_sentinel
-    mem_limit: 128m
-    cpus: 0.3
 
-  # otel-collector:
-  #   image: otel/opentelemetry-collector-contrib:latest
-  #   container_name: otel_collector
-  #   user: "0:0"
-  #   volumes:
-  #     - ./otel-collector-config.yaml:/etc/otelcol/config.yaml
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #   command: ["--config=/etc/otelcol/config.yaml"]
-  #   ports:
-  #     - "4318:4318"
-  #     - "4317:4317"
-  #   env_file: .env
-  #   networks:
-  #     - grafana_sentinel
+    # Configurações avançadas do PostgreSQL
+    command: >
+      postgres
+      -c logging_collector=on
+      -c log_destination=stderr
+      -c log_statement=all
+      -c log_min_duration_statement=0
+      -c log_connections=on
+      -c log_disconnections=on
+      -c log_lock_waits=on
+      -c client_min_messages=debug1
+
+    # Healthcheck de inicialização segura
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pokeob -d pokeob"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
 
 networks:
   grafana_sentinel:
     external: true
-##############################################################################################
-##############################################################################################
-
-# services:
-#   app:
-#     # build: .
-#     image: poke-ob
-#     container_name: Sentinel_API-01
-#     ports:
-#       - "8001:8001"
-#     depends_on:
-#       - database
-#     networks:
-#       - grafana_sentinel
-#     env_file: .env
-#     deploy:
-#       resources:
-#         limits:
-#           cpus: "0.50"
-#           memory: 256M
-#         reservations:
-#           cpus: "0.25"
-#           memory: 128M
-
-#   database:
-#     image: postgres
-#     container_name: PokeApi_observability_db
-#     restart: always
-#     ports:
-#       - "5433:5433"
-#     environment:
-#       POSTGRES_USER: pokeob
-#       POSTGRES_PASSWORD: pokeob
-#       POSTGRES_DB: pokeob
-#     command: postgres -c "port=5433"
-#     networks:
-#       - grafana_sentinel
-#     deploy:
-#       resources:
-#         limits:
-#           cpus: "0.30"
-#           memory: 128M
-#         reservations:
-#           cpus: "0.15"
-#           memory: 64M
-
-# networks:
-#   grafana_sentinel:
-#     external: true

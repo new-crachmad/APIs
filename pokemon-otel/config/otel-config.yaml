@@ -5,6 +5,8 @@ receivers:
       # (utilizado para receber logs e traces da aplicação instrumentada)
       http:
         endpoint: "0.0.0.0:4318"  # Escuta em todas as interfaces da máquina
+      grpc:
+        endpoint: "0.0.0.0:4317"  # Adiciona suporte a gRPC na porta 4317
 
 processors:
   batch:

@@ -1,122 +1,97 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # Banco de dados PostgreSQL
   db:
     image: postgres:15
+    container_name: pokemon_logs_db
+    restart: always
+
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: pokemon_logs
+
     ports:
-      - "5434:5432"  # Porta livre
+      - "5434:5432"
+
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+
     networks:
-      - sentinel
+      - grafana_sentinel
+
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "admin"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d pokemon_logs"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 5s
 
-  # API Pokémon instrumentada com OpenTelemetry
+
   api:
+    container_name: pokemon-api
     build:
       context: .
-    container_name: pokemon-api
+
+    restart: always
+
     ports:
-      - "3003:3000"  # Porta livre
-    env_file:
-      - .env
+      - "3005:3000"
+      - "9464:9464"   # <- Prometheus metrics expostas NO HOST
+
     depends_on:
       db:
         condition: service_healthy
-      otel-collector:
-        condition: service_started
-    networks:
-      - sentinel
 
-  # Grafana
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3004:3000"  # Porta livre
-    volumes:
-      - grafana-storage:/var/lib/grafana
-    depends_on:
-      - prometheus
-      - loki
-    networks:
-      - sentinel
+    env_file:
+      - .env
 
-  # Prometheus
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9092:9090"  # Porta livre
-    volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - sentinel
+    environment:
+      NODE_ENV: production
 
-  # Loki (single-node)
-  loki:
-    image: grafana/loki:2.9.4
-    ports:
-      - "3102:3100"  # Porta livre
-    command: -config.file=/etc/loki/loki-config.yaml
-    volumes:
-      - ./config/loki-config.yaml:/etc/loki/loki-config.yaml
-    networks:
-      - sentinel
+      # ================================================
+      # OPEN TELEMETRY — TRACING E LOGS
+      # ================================================
+      OTEL_SERVICE_NAME: pokemon-api
 
-  # Tempo
-  tempo:
-    image: grafana/tempo:latest
-    user: "root"
-    command: ["-config.file=/etc/tempo.yaml", "-log.level=info"]
-    volumes:
-      - ./config/tempo.yaml:/etc/tempo.yaml
-      - tempo-data:/tmp/tempo
-    ports:
-      - "3203:3200"
-      - "3204:3201"
-      - "3205:3202"
+      # Protocolo obrigatorio no Node
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+
+      # Endpoint principal
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
+
+      # Endpoints específicos
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://sentinel-otel:4318/v1/traces
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://sentinel-otel:4318/v1/logs
+
+      # Node NÃO suporta métricas OTLP
+      OTEL_METRICS_EXPORTER: none
+
+      # Ativar exportadores
+      OTEL_TRACES_EXPORTER: otlp
+      OTEL_LOGS_EXPORTER: otlp
+
+      # Correlação logs <-> traces
+      OTEL_LOGS_INCLUDE_TRACE_CONTEXT: "true"
+
+      # Report de erros mais verboso
+      OTEL_LOG_LEVEL: debug
+
     networks:
-      - sentinel
+      - grafana_sentinel
+
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3200/ready"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
 
-  # OpenTelemetry Collector
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
-    command: ["--config=/etc/otel-config.yaml"]
-    volumes:
-      - ./config/otel-config.yaml:/etc/otel-config.yaml
-    ports:
-      - "4319:4317"
-      - "4320:4318"
-      - "9465:9464"
-    depends_on:
-      - prometheus
-      - tempo
-    networks:
-      - sentinel
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:13133/health"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
 
 volumes:
-  grafana-storage:
   pgdata:
-  tempo-data:
 
 networks:
-  sentinel:
+  grafana_sentinel:
+    external: true

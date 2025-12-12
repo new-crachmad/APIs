@@ -1,6 +1,8 @@
 // Ativa a instrumentação automática com OpenTelemetry (tracing, métricas e logs)
 require('./tracing')
 
+
+
 const express = require('express')
 const axios = require('axios')
 

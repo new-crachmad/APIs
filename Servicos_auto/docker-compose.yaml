@@ -26,45 +26,77 @@ services:
   servicos_auto:
     build:
       context: .
-      dockerfile: Dockerfile   # <== CORRIGIDO
-    container_name: Sentinel_API-02
+      dockerfile: Dockerfile
+    container_name: servicos_auto
     restart: always
     ports:
       - "8085:8085"
+
     environment:
 
-      # Database
+      # ==========================
+      # Banco de dados
+      # ==========================
       SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/servicos_auto
       SPRING_DATASOURCE_USERNAME: servicos_auto
       SPRING_DATASOURCE_PASSWORD: servicos_auto
 
+      # ==========================
       # Cloudinary
+      # ==========================
       CLOUDINARY_URL: cloudinary://165568658442188:iHo1y5Ee0RxvqD9wDXzMn5KjP4k
       CLOUDINARY_CLOUD_NAME: Root
 
-      # OpenTelemetry
-      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4317   # <== CORRIGIDO
-      OTEL_EXPORTER_OTLP_PROTOCOL: grpc                        # <== ADICIONADO
-      OTEL_SERVICE_NAME: Sentinel_API-02
-      OTEL_METRICS_EXPORTER: otlp
+      # ==========================
+      # OpenTelemetry - NOME DO SERVIÇO
+      # ==========================
+      OTEL_SERVICE_NAME: servicos_auto
+
+      # Protocolo + endpoint OTLP
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://sentinel-otel:4318
+
+      # Endpoints específicos
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://sentinel-otel:4318/v1/traces
+      OTEL_EXPORTER_OTLP_LOGS_ENDPOINT: http://sentinel-otel:4318/v1/logs
+      OTEL_EXPORTER_OTLP_METRICS_ENDPOINT: http://sentinel-otel:4318/v1/metrics
+
+      # Exportadores ativos
       OTEL_TRACES_EXPORTER: otlp
       OTEL_LOGS_EXPORTER: otlp
+      OTEL_METRICS_EXPORTER: otlp
 
+      # ==========================
+      # Instrumentação de MÉTRICAS
+      # ==========================
       OTEL_INSTRUMENTATION_HTTP_SERVER_ENABLED: "true"
-      OTEL_INSTRUMENTATION_JVM_METRICS_EXPERIMENTAL_ENABLED: "true"
-      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: "true"
+      OTEL_INSTRUMENTATION_HTTP_CLIENT_ENABLED: "true"
+
+      OTEL_INSTRUMENTATION_JVM_ENABLED: "true"
+      OTEL_INSTRUMENTATION_JVM_METRICS_ENABLED: "true"
+
       OTEL_INSTRUMENTATION_RUNTIME_METRICS_ENABLED: "true"
+
+      # Cluster de métricas Spring Boot / Micrometer
+      OTEL_INSTRUMENTATION_MICROMETER_ENABLED: "true"
+
+      # Ativar tudo por padrão
+      OTEL_INSTRUMENTATION_COMMON_DEFAULT_ENABLED: "true"
 
     mem_limit: 1024M
     mem_reservation: 768M
     cpus: 0.5
-    
+
     depends_on:
       database:
         condition: service_healthy
 
     networks:
       - grafana_sentinel
+
+    # Torna o agente disponível dentro do container
+    volumes:
+      - ./opentelemetry-javaagent.jar:/app/opentelemetry-javaagent.jar:ro
 
 
 networks:

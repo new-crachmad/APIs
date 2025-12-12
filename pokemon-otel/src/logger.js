@@ -25,9 +25,9 @@ const resource = new Resource({
 
 // Exportador de logs via OTLP HTTP
 const logExporter = new OTLPLogExporter({
-  url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://otel-collector:4318/v1/logs',
+  url: process.env.OTEL_EXPORTER_OTLP_LOGS_ENDPOINT || 'http://sentinel-otel:4318/v1/logs'
+,
 })
-
 // Configura o LoggerProvider e adiciona o processador
 const loggerProvider = new LoggerProvider({ resource })
 loggerProvider.addLogRecordProcessor(new SimpleLogRecordProcessor(logExporter))
