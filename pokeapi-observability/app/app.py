@@ -3,6 +3,7 @@ import time
 from fastapi import  FastAPI, HTTPException,  Request
 import logging
 import httpx
+import os
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, registry
@@ -14,7 +15,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
-DATABASE_URL = "postgresql+asyncpg://pokeob:pokeob@database:5432/pokeob"
+# Database connection using environment variables
+POSTGRES_USER = os.environ.get("POSTGRES_USER")
+POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD")
+POSTGRES_SERVER = os.environ.get("POSTGRES_SERVER", "database")
+POSTGRES_DB = os.environ.get("POSTGRES_DB")
+
+DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_SERVER}:5432/{POSTGRES_DB}"
 POKEAPI_URL = "https://pokeapi.co/api/v2/pokemon/"
 
 # Configuração do SQLAlchemy
