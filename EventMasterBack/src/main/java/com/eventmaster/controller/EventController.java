@@ -3,20 +3,20 @@ package com.eventmaster.controller;
 import com.eventmaster.model.Event;
 import com.eventmaster.repository.EventRepository;
 
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/events")
 public class EventController {
 
     private final EventRepository repository;
-    private static final Logger logger = Logger.getLogger(EventController.class.getName());
-
+    private static final Logger logger = LoggerFactory.getLogger(EventController.class);
 
     public EventController(EventRepository repository) {
         this.repository = repository;
@@ -25,11 +25,8 @@ public class EventController {
     // Listar todos os eventos
     @GetMapping
     public ResponseEntity<List<Event>> getAll() {
-        List<Event> events = repository.findAll();
         logger.info("Buscando todos os eventos");
-        logger.log(Level.SEVERE, "Erro ao buscar eventos");
-
-
+        List<Event> events = repository.findAll();
         return ResponseEntity.ok(events);
     }
 
@@ -43,20 +40,25 @@ public class EventController {
 
     // Criar novo evento
     @PostMapping
-    public ResponseEntity<Event> create(@RequestBody Event event) {
+    public ResponseEntity<Event> create(@Valid @RequestBody Event event) {
         Event savedEvent = repository.save(event);
+        logger.info("Evento criado com sucesso: ID {}", savedEvent.getId());
         return ResponseEntity.ok(savedEvent);
     }
 
     // Atualizar evento
     @PutMapping("/{id}")
-    public ResponseEntity<Event> update(@PathVariable Long id, @RequestBody Event event) {
+    public ResponseEntity<Event> update(@PathVariable Long id, @Valid @RequestBody Event event) {
         return repository.findById(id)
                 .map(existing -> {
-                    existing.setName(event.getName());
+                    existing.setTitle(event.getTitle());
                     existing.setDescription(event.getDescription());
-                    existing.setDate(event.getDate());
+                    existing.setStartAt(event.getStartAt());
+                    existing.setCategory(event.getCategory());
+                    existing.setOrganizer(event.getOrganizer());
+
                     Event updated = repository.save(existing);
+                    logger.info("Evento atualizado com sucesso: ID {}", id);
                     return ResponseEntity.ok(updated);
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -68,6 +70,7 @@ public class EventController {
         return repository.findById(id)
                 .map(event -> {
                     repository.delete(event);
+                    logger.info("Evento deletado com sucesso: ID {}", id);
                     return ResponseEntity.noContent().build();
                 })
                 .orElse(ResponseEntity.notFound().build());

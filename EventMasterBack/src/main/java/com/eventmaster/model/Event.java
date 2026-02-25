@@ -1,53 +1,48 @@
 package com.eventmaster.model;
 
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.Data;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+
 import java.time.LocalDateTime;
 
-
-@Data
+@Getter
+@Setter
+@NoArgsConstructor
+@ToString(exclude = {"category", "organizer"})
 @Entity
+@Table(name = "events")
 public class Event {
-@Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long id;
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-private String title;
-private String description;
-private LocalDateTime startAt;
+    @NotBlank(message = "Title cannot be blank")
+    @Column(nullable = false)
+    private String title;
 
+    @Size(max = 1000, message = "Description cannot exceed 1000 characters")
+    @Column(length = 1000)
+    private String description;
 
-@ManyToOne
-@JoinColumn(name = "category_id")
-private Category category;
+    @Future(message = "Event start date must be in the future")
+    @Column(nullable = false)
+    private LocalDateTime startAt;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Category category;
 
-@ManyToOne
-@JoinColumn(name = "organizer_id")
-private User organizer;
-
-
-public Object getDate() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getDate'");
-}
-
-
-public void setDate(Object date) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'setDate'");
-}
-
-
-public Object getName() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getName'");
-}
-
-
-public void setName(Object name) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'setName'");
-}
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organizer_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private User organizer;
 }
