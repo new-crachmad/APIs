@@ -1,7 +1,8 @@
 package com.eventmaster.controller;
 
-import com.eventmaster.model.Registration;
-import com.eventmaster.repository.RegistrationRepository;
+import com.eventmaster.dto.RegistrationRequestDTO;
+import com.eventmaster.dto.RegistrationResponseDTO;
+import com.eventmaster.service.RegistrationService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,41 +15,35 @@ import java.util.List;
 @RequestMapping("/registrations")
 public class RegistrationController {
 
-    private final RegistrationRepository repository;
+    private final RegistrationService service;
     private static final Logger logger = LoggerFactory.getLogger(RegistrationController.class);
 
-    public RegistrationController(RegistrationRepository repository) {
-        this.repository = repository;
+    public RegistrationController(RegistrationService service) {
+        this.service = service;
     }
 
     @GetMapping
-    public ResponseEntity<List<Registration>> getAll() {
+    public ResponseEntity<List<RegistrationResponseDTO>> getAll() {
         logger.info("Buscando todas as inscrições");
-        return ResponseEntity.ok(repository.findAll());
+        return ResponseEntity.ok(service.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Registration> getById(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<RegistrationResponseDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findById(id));
     }
 
     @PostMapping
-    public ResponseEntity<Registration> create(@Valid @RequestBody Registration registration) {
-        Registration saved = repository.save(registration);
-        logger.info("Inscrição criada com sucesso: ID {}", saved.getId());
+    public ResponseEntity<RegistrationResponseDTO> create(@Valid @RequestBody RegistrationRequestDTO dto) {
+        RegistrationResponseDTO saved = service.create(dto);
+        logger.info("Inscrição criada com sucesso: ID {}", saved.id());
         return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> delete(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(registration -> {
-                    repository.delete(registration);
-                    logger.info("Inscrição deletada com sucesso: ID {}", id);
-                    return ResponseEntity.noContent().build();
-                })
-                .orElse(ResponseEntity.notFound().build());
+        service.delete(id);
+        logger.info("Inscrição deletada com sucesso: ID {}", id);
+        return ResponseEntity.noContent().build();
     }
 }

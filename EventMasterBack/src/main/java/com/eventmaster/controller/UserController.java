@@ -1,7 +1,8 @@
 package com.eventmaster.controller;
 
-import com.eventmaster.model.User;
-import com.eventmaster.repository.UserRepository;
+import com.eventmaster.dto.UserRequestDTO;
+import com.eventmaster.dto.UserResponseDTO;
+import com.eventmaster.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,50 +15,42 @@ import java.util.List;
 @RequestMapping("/users")
 public class UserController {
 
-    private final UserRepository repository;
+    private final UserService service;
     private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
-    public UserController(UserRepository repository) {
-        this.repository = repository;
+    public UserController(UserService service) {
+        this.service = service;
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAll() {
+    public ResponseEntity<List<UserResponseDTO>> getAll() {
         logger.info("Buscando todos os usuários");
-        return ResponseEntity.ok(repository.findAll());
+        return ResponseEntity.ok(service.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getById(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<UserResponseDTO> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findById(id));
     }
 
     @PostMapping
-    public ResponseEntity<User> create(@Valid @RequestBody User user) {
-        User savedUser = repository.save(user);
-        logger.info("Usuário criado com sucesso: ID {}", savedUser.getId());
+    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserRequestDTO dto) {
+        UserResponseDTO savedUser = service.create(dto);
+        logger.info("Usuário criado com sucesso: ID {}", savedUser.id());
         return ResponseEntity.ok(savedUser);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> update(@PathVariable Long id, @Valid @RequestBody User user) {
-        return repository.findById(id).map(existing -> {
-            existing.setName(user.getName());
-            existing.setEmail(user.getEmail());
-            User updated = repository.save(existing);
-            logger.info("Usuário atualizado com sucesso: ID {}", id);
-            return ResponseEntity.ok(updated);
-        }).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO dto) {
+        UserResponseDTO updated = service.update(id, dto);
+        logger.info("Usuário atualizado com sucesso: ID {}", id);
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Object> delete(@PathVariable Long id) {
-        return repository.findById(id).map(user -> {
-            repository.delete(user);
-            logger.info("Usuário deletado com sucesso: ID {}", id);
-            return ResponseEntity.noContent().build();
-        }).orElse(ResponseEntity.notFound().build());
+        service.delete(id);
+        logger.info("Usuário deletado com sucesso: ID {}", id);
+        return ResponseEntity.noContent().build();
     }
 }
