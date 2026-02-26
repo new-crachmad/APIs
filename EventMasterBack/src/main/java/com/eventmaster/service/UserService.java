@@ -5,19 +5,25 @@ import com.eventmaster.dto.UserResponseDTO;
 import com.eventmaster.model.User;
 import com.eventmaster.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Validated
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -35,16 +41,18 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDTO create(UserRequestDTO dto) {
+    public UserResponseDTO create(@Valid UserRequestDTO dto) {
         User user = new User();
         user.setName(dto.name());
         user.setEmail(dto.email());
+        user.setPassword(passwordEncoder.encode(dto.password()));
+        user.setRole("USER"); // Role padrão
         User savedUser = userRepository.save(user);
         return toResponseDTO(savedUser);
     }
 
     @Transactional
-    public UserResponseDTO update(Long id, UserRequestDTO dto) {
+    public UserResponseDTO update(Long id, @Valid UserRequestDTO dto) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found with id: " + id));
         user.setName(dto.name());
