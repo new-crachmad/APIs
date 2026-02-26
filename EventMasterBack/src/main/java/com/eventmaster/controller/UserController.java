@@ -33,13 +33,6 @@ public class UserController {
         return ResponseEntity.ok(service.findById(id));
     }
 
-    @PostMapping
-    public ResponseEntity<UserResponseDTO> create(@Valid @RequestBody UserRequestDTO dto) {
-        UserResponseDTO savedUser = service.create(dto);
-        logger.info("Usuário criado com sucesso: ID {}", savedUser.id());
-        return ResponseEntity.ok(savedUser);
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<UserResponseDTO> update(@PathVariable Long id, @Valid @RequestBody UserRequestDTO dto) {
         UserResponseDTO updated = service.update(id, dto);

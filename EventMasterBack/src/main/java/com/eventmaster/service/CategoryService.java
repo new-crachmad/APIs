@@ -5,13 +5,16 @@ import com.eventmaster.dto.CategoryResponseDTO;
 import com.eventmaster.model.Category;
 import com.eventmaster.repository.CategoryRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Validated
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
@@ -35,7 +38,7 @@ public class CategoryService {
     }
 
     @Transactional
-    public CategoryResponseDTO create(CategoryRequestDTO dto) {
+    public CategoryResponseDTO create(@Valid CategoryRequestDTO dto) {
         Category category = new Category();
         category.setName(dto.name());
         Category savedCategory = categoryRepository.save(category);
