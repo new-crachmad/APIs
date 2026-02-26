@@ -9,13 +9,16 @@ import com.eventmaster.repository.EventRepository;
 import com.eventmaster.repository.RegistrationRepository;
 import com.eventmaster.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Validated
 public class RegistrationService {
 
     private final RegistrationRepository registrationRepository;
@@ -43,7 +46,7 @@ public class RegistrationService {
     }
 
     @Transactional
-    public RegistrationResponseDTO create(RegistrationRequestDTO dto) {
+    public RegistrationResponseDTO create(@Valid RegistrationRequestDTO dto) {
         Event event = eventRepository.findById(dto.eventId())
                 .orElseThrow(() -> new EntityNotFoundException("Event not found"));
         User user = userRepository.findById(dto.userId())

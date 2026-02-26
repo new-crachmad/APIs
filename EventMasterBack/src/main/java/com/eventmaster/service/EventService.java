@@ -9,13 +9,16 @@ import com.eventmaster.repository.CategoryRepository;
 import com.eventmaster.repository.EventRepository;
 import com.eventmaster.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@Validated
 public class EventService {
 
     private final EventRepository eventRepository;
@@ -43,7 +46,7 @@ public class EventService {
     }
 
     @Transactional
-    public EventResponseDTO create(EventRequestDTO dto) {
+    public EventResponseDTO create(@Valid EventRequestDTO dto) {
         Category category = categoryRepository.findById(dto.categoryId())
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
         User organizer = userRepository.findById(dto.organizerId())
