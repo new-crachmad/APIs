@@ -9,5 +9,4 @@ public record EventResponseDTO(
         LocalDateTime startAt,
         String categoryName,
         String organizerName
-) {
-}
+) {}

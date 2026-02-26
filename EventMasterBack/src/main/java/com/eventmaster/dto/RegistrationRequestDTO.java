@@ -1,4 +1,11 @@
 package com.eventmaster.dto;
 
-public record RegistrationRequestDTO(Long eventId, Long userId) {
-}
+import jakarta.validation.constraints.NotNull;
+
+public record RegistrationRequestDTO(
+        @NotNull(message = "Event ID is required")
+        Long eventId,
+
+        @NotNull(message = "User ID is required")
+        Long userId
+) {}
